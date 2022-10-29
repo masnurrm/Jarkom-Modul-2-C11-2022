@@ -22,7 +22,7 @@ Setelah mengatur susunan topologi, selanjutnya dilakukan beberapa konfigurasi un
 
 - **Konfigurasi IP Address**
 
-    Konfigurasi Ostania
+    Konfigurasi Ostania (Router yang tersambung ke ISP NAT dengan konfigurasi IP dinamis atau DHCP)
 
     ```bash
     auto eth0
@@ -116,11 +116,11 @@ Setelah mengatur susunan topologi, selanjutnya dilakukan beberapa konfigurasi un
     Untuk node Berlint
     
     ```bash
-    echo 'nameserver 192.168.122.1 ' > /etc/resolv.conf
+    echo 'nameserver 10.15.2.2 ' > /etc/resolv.conf
 
     ```
 
-    Untuk node Garden
+    Untuk node Garden dan SSS
 
     ```bash
     echo 'nameserver 10.15.2.2
@@ -139,22 +139,37 @@ Setelah mengatur susunan topologi, selanjutnya dilakukan beberapa konfigurasi un
 ### **Soal 2**
 **Untuk mempermudah mendapatkan informasi mengenai misi dari Handler, bantulah Loid membuat website utama dengan akses wise.yyy.com dengan alias www.wise.yyy.com pada folder wise**
 
-Pada console Wise dilakukan konfigurasi sebagai berikut untuk menjadi DNS Master.
+Pada console Wise dilakukan konfigurasi sebagai berikut untuk menjadi DNS Master. Pertama, dilakukan instalasi bind9 agar dapat dilakukan koneksi dengan node lain.
 
 ```bash
 apt-get update
 apt-get install bind9 -y
+```
 
+Kedua, buat zone baru untuk mendaftarkan `wise.c11.com` dan menjadikannya sebagai DNS master. Masukkan konfigurasi ke dalam `/etc/bind/named.conf.local`.
+```bash
 echo ’zone "wise.c11.com" {
 	type master;
 	file "/etc/bind/jarkom/wise.c11.com";
 }; ’ > /etc/bind/named.conf.local
+```
 
+Ketiga, buat folder baru `jarkom` di dalam `/etc/bind/`.
+
+```bash
 rm -r /etc/bind/jarkom
 mkdir /etc/bind/jarkom
+```
 
+Keempat, copy isi dari `/etc/bind/db.local` ke dalam `/etc/bind/jarkom/wise.c11.com` yang baru dibuat untuk menangani DNS `wise.c11.com`.
+
+```bash
 cp /etc/bind/db.local /etc/bind/jarkom/wise.c11.com
+```
 
+Kelima, atur SOA dari wise.c11.com termasuk CNAME, Alias, dan Nameserver.
+
+```bash
 echo ‘;
 ; BIND data file for local loopback interface
 ;
@@ -170,16 +185,22 @@ $TTL    604800
 @       IN      A       10.15.2.2
 @       IN      AAAA    ::1 
 www      IN      CNAME   wise.c11.com.’ > /etc/bind/jarkom/wise.c11.com
+```
 
+Terakhir, restart bind9.
+
+```bash
 service bind9 restart
 ```
+
+Pengetesan dilakukan dengan melakukan `ping wise.c11.com` atau `ping www.wise.c11.com` pada node client (Garden atau SSS). Bukti terlampir pada folder `img`.
 
 </br>
 
 ### **Soal 3**
 **Setelah itu ia juga ingin membuat subdomain eden.wise.yyy.com dengan alias www.eden.wise.yyy.com yang diatur DNS-nya di WISE dan mengarah ke Eden**
 
-Pada console Wise dilakukan konfigurasi sebagai berikut.
+Pada console Wise dilakukan konfigurasi sebagai berikut. Atur SOA yang telah dibuat sebelumnya dengan menambahkan CNAME baru untuk www, serta Alias untuk `eden` dan `www.eden`
 
 ```bash
 echo ‘;
@@ -199,16 +220,22 @@ $TTL    604800
 www      IN      CNAME   wise.c11.com.
 eden     IN      A       10.15.3.3
 www.eden IN      A      10.15.3.3’ > /etc/bind/jarkom/wise.c11.com
+```
 
+Terakhir, restart bind9.
+
+```bash
 service bind9 restart
 ```
+
+Pengetesan dilakukan dengan melakukan `ping eden.wise.c11.com` atau `ping www.eden.wise.c11.com` pada node client (Garden atau SSS). Bukti terlampir pada folder `img`.
 
 </br>
 
 ### **Soal 4**
 **Buat juga reverse domain untuk domain utama**
 
-Pada console Wise dilakukan konfigurasi sebagai berikut.
+Pada console Wise dilakukan konfigurasi sebagai berikut. Pertama, buat zone baru untuk hasil reverse PTR sebagai berikut.
 
 ```bash
 #10.15.2
@@ -217,9 +244,17 @@ echo ‘zone "2.15.10.in-addr.arpa" {
     type master;
     file "/etc/bind/jarkom/2.15.10.in-addr.arpa";
 }; ‘ > nano /etc/bind/named.conf.local
+```
 
+Kedua, copy isi dari `/etc/bind/db.local` ke dalam `/etc/bind/jarkom/2.15.10.in-addr.arpa` yang selanjutnya akan digunakan untuk wadah dari hasil reverse PTR.
+
+```bash
 cp /etc/bind/db.local /etc/bind/jarkom/2.15.10.in-addr.arpa
+```
 
+Ketiga, atur SOA untuk reverse PTR sebagai berikut. NS dan PTR tetap mengarah pada `wise.c11.com`.
+
+```bash
 echo ‘;
 ; BIND data file for local loopback interface
 ;
@@ -233,17 +268,22 @@ $TTL    604800
 ;
 2.15.10.in-addr.arpa.	IN	NS	wise.c11.com.
 2	IN	PTR	wise.c11.com. ‘ > /etc/bind/jarkom/2.15.10.in-addr.arpa
+```
 
+Terakhir, restart bind9.
 
+```bash
 service bind9 restart
 ```
+
+Pengetesan dilakukan dengan melakukan `host -t PTR 10.15.2.2` (IP Wise) pada node client (Garden atau SSS). Bukti terlampir pada folder `img`.
 
 </br>
 
 ### **Soal 5**
 **Agar dapat tetap dihubungi jika server WISE bermasalah, buatlah juga Berlint sebagai DNS Slave untuk domain utama**
 
-Pada console Wise dilakukan konfigurasi sebagai berikut.
+Pada console Wise dilakukan konfigurasi sebagai berikut. Pertama, lakukan konfigurasi zone pada Wise sebagai berikut sehingga layanan dari Wise dapat diturunkan ke Berlint (10.15.3.2).
 
 ```bash
 echo ’zone "wise.c11.com" {
@@ -259,7 +299,7 @@ zone "2.15.10.in-addr.arpa" {
 }; ‘ > nano /etc/bind/named.conf.local
 ```
 
-Pada console Berlint dilakukan konfigurasi sebagai berikut.
+Kedua, pada console Berlint juga dilakukan konfigurasi sebagai berikut dengan instalasi bind9 serta membuat zona `wise.c11.com` namun sebagai slave yang mengarah ke masters Wise (10.15.2.2).
 
 ```bash
 apt-get update
@@ -270,9 +310,15 @@ echo ‘zone "wise.c11.com" {
     masters { 10.15.2.2; }; 
     file "/var/lib/bind/wise.c11.com";
 }; ‘ > /etc/bind/named.conf.local
+```
 
+Terakhir, restart bind9.
+
+```bash
 service bind9 restart
 ```
+
+Pengetesan dilakukan dengan melakukan `ping wise.c11.com` atau `ping www.wise.c11.com` pada node client (Garden atau SSS). Bukti terlampir pada folder `img`.
 
 </br>
 
@@ -396,6 +442,9 @@ www.strix       IN      A       10.15.3.3 ' > /etc/bind/operation/operation.wise
 
 ### **Soal 8**
 **Setelah melakukan konfigurasi server, maka dilakukan konfigurasi Webserver. Pertama dengan webserver www.wise.yyy.com. Pertama, Loid membutuhkan webserver dengan DocumentRoot pada /var/www/wise.yyy.com**
+
+Pada console Wise dilakukan konfigurasi sebagai berikut.
+
 
 </br>
 
