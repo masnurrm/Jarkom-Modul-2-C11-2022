@@ -15,7 +15,87 @@ Laporan ini berisi penjelasan dari soal-soal yang dikerjakan pada modul 2 hingga
 ### **Soal 1**
 **WISE akan dijadikan sebagai DNS Master, Berlint akan dijadikan DNS Slave, dan Eden akan digunakan sebagai Web Server. Terdapat 2 Client yaitu SSS, dan Garden. Semua node terhubung pada router Ostania, sehingga dapat mengakses internet.**
 
+- **Konfigurasi IP Address**
 
+    Konfigurasi Ostania
+
+    ```bash
+    auto eth0
+        iface eth0 inet dhcp
+
+    auto eth1
+        iface eth1 inet static
+        address 10.15.1.1
+        netmask 255.255.255.0
+
+    auto eth2
+        iface eth2 inet static
+        address 10.15.2.1
+        netmask 255.255.255.0
+
+    auto eth3
+        iface eth3 inet static
+        address 10.15.3.1
+        netmask 255.255.255.0
+    ```
+
+    Konfigurasi SSS
+
+    ```bash
+    auto eth0
+        iface eth0 inet static
+        address 10.15.1.2
+        netmask 255.255.255.0
+        gateway 10.15.1.1
+    ```
+
+    Konfigurasi Garden
+
+    ```bash
+    auto eth0
+        iface eth0 inet static
+        address 10.15.1.3
+        netmask 255.255.255.0
+        gateway 10.15.1.1
+    ```
+
+    Konfigurasi Wise
+
+    ```bash
+    auto eth0
+        iface eth0 inet static
+        address 10.15.2.2
+        netmask 255.255.255.0
+        gateway 10.15.2.1
+    ```
+
+    Konfigurasi Berlint
+
+    ```bash
+    auto eth0
+        iface eth0 inet static
+        address 10.15.3.2
+        netmask 255.255.255.0
+        gateway 10.15.3.1
+    ```
+
+    Konfigurasi Eden
+
+    ```bash
+    auto eth0
+        iface eth0 inet static
+        address 10.15.3.3
+        netmask 255.255.255.0
+        gateway 10.15.3.1
+    ```
+
+- Konfigurasi Router (Ostania)
+
+    Agar client bisa terhubung ke internet, perlu dilakukan konfigurasi iptables pada router (Ostania). Kemudian, simpan kedalam file `.bashrc`.
+
+    ```bash
+    echo 'iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE -s 10.15.0.0/16 ' >> .bashrc
+    ```
 
 </br>
 
