@@ -18,6 +18,8 @@ Laporan ini berisi penjelasan dari soal-soal yang dikerjakan pada modul 2 hingga
 ### **Soal 1**
 **Wise akan dijadikan sebagai DNS Master, Berlint akan dijadikan DNS Slave, dan Eden akan digunakan sebagai Web Server. Terdapat 2 Client yaitu SSS, dan Garden. Semua node terhubung pada router Ostania, sehingga dapat mengakses internet**
 
+![Gambar Topologi yang Dibuat](https://raw.githubusercontent.com/masnurrm/Jarkom-Modul-2-C11-2022/main/img/Bukti%20Topologi.png)
+
 Setelah mengatur susunan topologi, selanjutnya dilakukan beberapa konfigurasi untuk tiap node dan juga router pada setiap port yang digunakan atau tersambung.
 
 - **Konfigurasi IP Address**
@@ -412,6 +414,9 @@ www.strix	IN	CNAME	10.15.3.3 ‘ > /etc/bind/operation/operation.wise.c11.com
 service bind9 restart
 ```
 
+Pengetesan dilakukan dengan melakukan `ping operation.wise.c11.com` atau `ping www.operation.wise.c11.com` pada node client (Garden atau SSS). Bukti terlampir pada folder `img`.
+
+
 </br>
 
 ### **Soal 7**
@@ -438,6 +443,8 @@ strix           IN      A       10.15.3.3
 www.strix       IN      A       10.15.3.3 ' > /etc/bind/operation/operation.wise.c11.com
 ```
 
+Pengetesan dilakukan dengan melakukan `ping strix.operation.wise.c11.com` atau `ping www.strix.operation.wise.c11.com` pada node client (Garden atau SSS). Bukti terlampir pada folder `img`.
+
 </br>
 
 ### **Soal 8**
@@ -445,11 +452,133 @@ www.strix       IN      A       10.15.3.3 ' > /etc/bind/operation/operation.wise
 
 Pada console Wise dilakukan konfigurasi sebagai berikut.
 
+```bash
+cp /etc/bind/wise/2.15.10.in-addr.arpa /etc/bind/wise/3.15.10.in-addr.arpa
+
+echo ‘;
+; BIND data file for local loopback interface
+;
+$TTL    604800
+@       IN      SOA     wise.c11.com. root.wise.c11.com. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+3.15.10.in-addr.arpa.       IN      NS      wise.c11.com.
+2       IN      PTR      wise.c11.com. ’ > /etc/bind/wise/3.15.10.in-addr.arpa
+
+
+echo ‘zone "wise.c11.com" {
+    type master;
+    file "/etc/bind/wise/wise.c11.com";
+    allow-transfer { 192.175.3.2; };
+};
+zone "3.15.10.in-addr.arpa" {
+    type master;
+    file "/etc/bind/wise/3.15.10.in-addr.arpa";
+}; ’ > /etc/bind/named.conf.local
+
+
+echo ';
+; BIND data file for local loopback interface
+;
+$TTL    604800
+@       IN      SOA     wise.c11.com. root.wise.c11.com. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@       IN      NS      wise.c11.com.
+@       IN      A       10.15.3.3
+www     IN      CNAME   wise.c11.com.
+eden    IN      A       10.15.3.3
+www.eden        IN      CNAME   eden.wise.c11.com.
+ns1     IN      A       10.15.3.3
+operation       IN      NS      ns1
+@       IN      AAAA    ::1 ' > /etc/bind/wise/wise.c11.com
+
+service bind9 restart
+```
+
+Pada console Wise dilakukan konfigurasi sebagai berikut.
+
+```bash
+apt-get update
+apt-get install apache2
+service apache2 start
+apt-get install php
+apt-get install libapache2-mod-php7.0
+apt-get install wget -y
+apt-get install unzip -y
+
+cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/wise.c11.com.conf
+
+echo '<VirtualHost *:80>
+        ServerAdmin webmaster@localhost
+        DocumentRoot /var/www/wise.c11.com
+        ServerName wise.c11.com
+        ServerAlias www.wise.c11.com
+
+
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost> ' > /etc/apache2/sites-available/wise.c11.com.conf
+
+mkdir /var/www/wise.c11.com
+wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1S0XhL9ViYN7TyCj2W66BNEXQD2AAAw2e' -O /var/www/wise.zip
+unzip /var/www/wise.zip -d /var/www
+cp /var/www/wise/* /var/www/wise.c11.com
+
+a2ensite wise.c11.com
+service apache2 restart
+service apache2 reload
+```
+
+Pada console Wise dilakukan konfigurasi sebagai berikut.
+
+```bash
+echo ‘nameserver 10.15.2.2 ’ > /etc/resolv.conf
+lynx www.wise.c11.com
+```
+
 
 </br>
 
 ### **Soal 9**
 **Setelah itu, Loid juga membutuhkan agar url www.wise.yyy.com/index.php/home dapat menjadi menjadi www.wise.yyy.com/home**
+
+Pada console Wise dilakukan konfigurasi sebagai berikut.
+
+```bash
+a2enmod rewrite
+service apache2 restart
+
+echo ‘RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule (.*) /index.php/\$1 [L] ‘ > /var/www/wise.c11.com/.htaccess
+
+echo ‘<VirtualHost *:80>
+        ServerAdmin webmaster@localhost
+        DocumentRoot /var/www/wise.c11.com
+        ServerName wise.c11.com
+        ServerAlias www.wise.c11.com
+
+        ErrorLog \${APACHE_LOG_DIR}/error.log
+        CustomLog \${APACHE_LOG_DIR}/access.log combined
+
+        <Directory /var/www/wise.c11.com>
+                Options +FollowSymLinks -Multiviews
+                AllowOverride All
+        </Directory>
+</VirtualHost> ‘ > /etc/apache2/sites-available/wise.c11.com.conf
+
+service apache2 restart
+```
 
 </br>
 
