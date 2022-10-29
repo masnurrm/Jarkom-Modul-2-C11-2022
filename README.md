@@ -18,7 +18,7 @@ Laporan ini berisi penjelasan dari soal-soal yang dikerjakan pada modul 2 hingga
 ### **Soal 1**
 **Wise akan dijadikan sebagai DNS Master, Berlint akan dijadikan DNS Slave, dan Eden akan digunakan sebagai Web Server. Terdapat 2 Client yaitu SSS, dan Garden. Semua node terhubung pada router Ostania, sehingga dapat mengakses internet**
 
-Setelah mengatur susunan topologi, selanjutnya dilakukan beberapa konfigurasi untuk tiap node dan juga router.
+Setelah mengatur susunan topologi, selanjutnya dilakukan beberapa konfigurasi untuk tiap node dan juga router pada setiap port yang digunakan atau tersambung.
 
 - **Konfigurasi IP Address**
 
