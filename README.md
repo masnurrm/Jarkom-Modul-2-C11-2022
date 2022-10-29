@@ -15,6 +15,8 @@ Laporan ini berisi penjelasan dari soal-soal yang dikerjakan pada modul 2 hingga
 ### **Soal 1**
 **WISE akan dijadikan sebagai DNS Master, Berlint akan dijadikan DNS Slave, dan Eden akan digunakan sebagai Web Server. Terdapat 2 Client yaitu SSS, dan Garden. Semua node terhubung pada router Ostania, sehingga dapat mengakses internet.**
 
+Setelah mengatur susunan topologi, selanjutnya dilakukan beberapa konfigurasi untuk tiap node dan juga router.
+
 - **Konfigurasi IP Address**
 
     Konfigurasi Ostania
@@ -95,6 +97,38 @@ Laporan ini berisi penjelasan dari soal-soal yang dikerjakan pada modul 2 hingga
 
     ```bash
     echo 'iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE -s 10.15.0.0/16 ' >> .bashrc
+    ```
+
+- Konfigurasi Nameserver
+
+    Agar setiap node dapat memiliki koneksi dengan node parent-nya, maka perlu dilakukan konfigurasi nameserver sebagai berikut.
+
+    Untuk node Wise sebagai DNS Master
+
+    ```bash
+    echo 'nameserver 192.168.122.1
+    nameserver 8.8.8.8 ' > /etc/resolv.conf
+    ```
+
+    Untuk node Berlint
+    
+    ```bash
+    echo 'nameserver 192.168.122.1 ' > /etc/resolv.conf
+
+    ```
+
+    Untuk node Garden
+
+    ```bash
+    echo 'nameserver 10.15.2.2
+    nameserver 10.15.3.2 ' > /etc/resolv.conf
+    ```
+
+    Untuk node Eden
+
+    ```bash
+    echo 'nameserver 10.15.3.2
+    nameserver 10.15.2.2 ' > /etc/resolv.conf   
     ```
 
 </br>
